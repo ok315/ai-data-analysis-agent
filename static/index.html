@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Agent</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 50px auto; padding: 0 20px; }
+        textarea { width: 100%; height: 60px; font-size: 16px; padding: 8px; }
+        button { padding: 10px 20px; font-size: 16px; margin-top: 10px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 15px; background: #f4f4f4; border-radius: 6px; white-space: pre-wrap; }
+        .loading { color: #888; }
+    </style>
+</head>
+<body>
+    <h1>Ask Your Data</h1>
+    <textarea id="question" placeholder="e.g. What is the total amount spent on Food?"></textarea>
+    <br>
+    <button onclick="askQuestion()">Ask</button>
+    <div id="result"></div>
+
+    <script>
+        async function askQuestion() {
+            const question = document.getElementById("question").value;
+            const resultDiv = document.getElementById("result");
+
+            if (!question.trim()) {
+                resultDiv.innerHTML = "Please type a question first.";
+                return;
+            }
+
+            resultDiv.innerHTML = "<span class='loading'>Thinking...</span>";
+
+            try {
+                const response = await fetch("/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    resultDiv.innerHTML = "Error: " + JSON.stringify(data.detail);
+                    return;
+                }
+
+                resultDiv.innerHTML =
+                    "<b>Answer:</b> " + data.answer +
+                    "<br><br><b>Plan:</b><br>" + data.plan.replace(/\n/g, "<br>") +
+                    "<br><br><i>Attempts: " + data.attempts + "</i>";
+            } catch (err) {
+                resultDiv.innerHTML = "Request failed: " + err;
+            }
+        }
+    </script>
+</body>
+</html>
