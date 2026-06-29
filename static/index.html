@@ -1,56 +1,538 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Data Agent</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 700px; margin: 50px auto; padding: 0 20px; }
-        textarea { width: 100%; height: 60px; font-size: 16px; padding: 8px; }
-        button { padding: 10px 20px; font-size: 16px; margin-top: 10px; cursor: pointer; }
-        #result { margin-top: 20px; padding: 15px; background: #f4f4f4; border-radius: 6px; white-space: pre-wrap; }
-        .loading { color: #888; }
-    </style>
+<meta charset="UTF-8">
+<title>Data Agent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #14181f;
+    --ink-panel: #1c2230;
+    --ink-panel-2: #232a3a;
+    --page: #f7f5ef;
+    --paper: #ffffff;
+    --amber: #c9924a;
+    --amber-bright: #e3ab5e;
+    --text-dim: #6b7280;
+    --line: #e6e2d6;
+    --success: #5fa985;
+    --error: #c1604a;
+  }
+
+  * { box-sizing: border-box; }
+  ::selection { background: var(--amber); color: #fff; }
+
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 64px 24px 90px;
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 36px;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 rgba(95,169,133,0.5);
+    animation: pulse 2.2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(95,169,133,0.45); }
+    70% { box-shadow: 0 0 0 7px rgba(95,169,133,0); }
+    100% { box-shadow: 0 0 0 0 rgba(95,169,133,0); }
+  }
+
+  .attempts-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 4px 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .attempts-badge.show { opacity: 1; }
+
+  h1 {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    line-height: 1.1;
+  }
+
+  .accent-word {
+    color: var(--amber);
+    font-style: italic;
+    font-weight: 600;
+    position: relative;
+  }
+
+  .sub {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 520px;
+    line-height: 1.6;
+    margin: 0 0 36px;
+  }
+
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 8px;
+    box-shadow: 0 2px 10px rgba(30,25,10,0.04);
+  }
+
+  .input-inner { padding: 22px 22px 18px; }
+
+  textarea {
+    width: 100%;
+    min-height: 60px;
+    resize: none;
+    border: none;
+    outline: none;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    color: var(--ink);
+    background: transparent;
+    line-height: 1.5;
+  }
+
+  textarea::placeholder { color: #b3afa3; }
+
+  .panel-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px 12px 22px;
+    border-top: 1px solid var(--line);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .examples { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    padding: 6px 11px;
+    border-radius: 8px;
+    background: var(--page);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+  }
+
+  .chip:hover { background: #efe9d8; color: var(--ink); }
+
+  button.ask {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    border: none;
+    background: var(--ink);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  button.ask:hover:not(:disabled) {
+    background: var(--amber);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(201,146,74,0.35);
+  }
+
+  button.ask:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+  .arrow { transition: transform 0.15s ease; }
+  button.ask:hover .arrow { transform: translateX(3px); }
+
+  /* console */
+  .console {
+    margin-top: 22px;
+    background: var(--ink-panel);
+    border-radius: 16px;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+  }
+
+  .console.show { max-height: 900px; opacity: 1; }
+
+  .console-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #2e3648;
+    padding: 0 20px;
+  }
+
+  .tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #6b7690;
+    padding: 14px 4px;
+    margin-right: 22px;
+    border-bottom: 2px solid transparent;
+    position: relative;
+  }
+
+  .tab.active { color: var(--amber-bright); border-bottom-color: var(--amber-bright); }
+
+  .console-body { padding: 22px 24px 26px; }
+
+  .phase {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #8b95ad;
+    margin-bottom: 16px;
+    letter-spacing: 0.03em;
+  }
+
+  .spinner {
+    width: 11px; height: 11px;
+    border: 1.5px solid #3c455c;
+    border-top-color: var(--amber-bright);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .plan-list { margin-bottom: 18px; }
+
+  .step {
+    font-size: 13.5px;
+    line-height: 1.75;
+    padding-left: 20px;
+    position: relative;
+    color: #c4cad9;
+    opacity: 0;
+    animation: stepIn 0.4s ease forwards;
+  }
+
+  .step::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--amber-bright);
+    font-size: 11px;
+  }
+
+  @keyframes stepIn {
+    from { opacity: 0; transform: translateX(-5px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .code-block {
+    background: #11151d;
+    border: 1px solid #2a3144;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: #9fb4d8;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 24px;
+    display: none;
+  }
+
+  .code-block.show { display: block; }
+
+  .code-cursor {
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    background: var(--amber-bright);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink 0.9s step-end infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .retry-note {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--error);
+    background: rgba(193,96,74,0.1);
+    border: 1px solid rgba(193,96,74,0.25);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    display: none;
+  }
+
+  .retry-note.show { display: block; animation: stepIn 0.3s ease forwards; }
+
+  .answer-block {
+    border-top: 1px solid #2e3648;
+    padding-top: 18px;
+    display: none;
+    opacity: 0;
+  }
+
+  .answer-block.show { display: block; animation: rise 0.45s ease forwards; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .answer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7690;
+    margin-bottom: 6px;
+  }
+
+  .answer-value {
+    font-size: 32px;
+    font-weight: 600;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.01em;
+  }
+
+  .error-box {
+    margin-top: 20px;
+    background: #fdf1ef;
+    border: 1px solid #f0c8c0;
+    color: #a3402c;
+    border-radius: 12px;
+    padding: 15px 18px;
+    font-size: 13.5px;
+    display: none;
+  }
+
+  .error-box.show { display: block; }
+
+  .footer-tag {
+    margin-top: 44px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: #a3a097;
+    text-align: center;
+    letter-spacing: 0.03em;
+  }
+
+  .footer-tag b { color: var(--amber); }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 32px; }
+    .panel-footer { flex-direction: column; align-items: stretch; }
+    button.ask { justify-content: center; }
+  }
+</style>
 </head>
 <body>
-    <h1>Ask Your Data</h1>
-    <textarea id="question" placeholder="e.g. What is the total amount spent on Food?"></textarea>
-    <br>
-    <button onclick="askQuestion()">Ask</button>
-    <div id="result"></div>
+  <div class="wrap">
+    <div class="top">
+      <div class="eyebrow"><span class="status-dot"></span>self-correcting agent</div>
+      <div class="attempts-badge" id="attemptsBadge"></div>
+    </div>
 
-    <script>
-        async function askQuestion() {
-            const question = document.getElementById("question").value;
-            const resultDiv = document.getElementById("result");
+    <h1>Ask your data.<br><span class="accent-word">Watch it think.</span></h1>
+    <p class="sub">Plans the approach, writes its own pandas code, runs it — and if the code breaks, reads the error and rewrites itself. No human in the loop.</p>
 
-            if (!question.trim()) {
-                resultDiv.innerHTML = "Please type a question first.";
-                return;
-            }
+    <div class="panel">
+      <div class="input-inner">
+        <textarea id="question" placeholder="Ask anything about the expense data…" rows="2"></textarea>
+      </div>
+      <div class="panel-footer">
+        <div class="examples">
+          <span class="chip" onclick="useExample(this)">Total spent on Food?</span>
+          <span class="chip" onclick="useExample(this)">Highest vs lowest category?</span>
+          <span class="chip" onclick="useExample(this)">Month with most over-average categories?</span>
+        </div>
+        <button class="ask" id="askBtn" onclick="askQuestion()">Run agent <span class="arrow">→</span></button>
+      </div>
+    </div>
 
-            resultDiv.innerHTML = "<span class='loading'>Thinking...</span>";
+    <div class="console" id="console">
+      <div class="console-tabs">
+        <div class="tab active">agent.reasoning</div>
+      </div>
+      <div class="console-body">
+        <div class="phase" id="phase"><span class="spinner" id="spinner"></span><span id="phaseText">planning…</span></div>
+        <div class="plan-list" id="planList"></div>
+        <div class="retry-note" id="retryNote"></div>
+        <div class="code-block" id="codeBlock"></div>
+        <div class="answer-block" id="answerBlock">
+          <div class="answer-label">Result</div>
+          <div class="answer-value" id="answerValue"></div>
+        </div>
+      </div>
+    </div>
 
-            try {
-                const response = await fetch("/ask", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ question: question })
-                });
+    <div class="error-box" id="errorBox"></div>
 
-                const data = await response.json();
+    <div class="footer-tag">plan <b>→</b> generate code <b>→</b> execute <b>→</b> self-correct on failure</div>
+  </div>
 
-                if (!response.ok) {
-                    resultDiv.innerHTML = "Error: " + JSON.stringify(data.detail);
-                    return;
-                }
+<script>
+  function useExample(el) {
+    const ta = document.getElementById('question');
+    ta.value = el.textContent;
+    ta.focus();
+  }
 
-                resultDiv.innerHTML =
-                    "<b>Answer:</b> " + data.answer +
-                    "<br><br><b>Plan:</b><br>" + data.plan.replace(/\n/g, "<br>") +
-                    "<br><br><i>Attempts: " + data.attempts + "</i>";
-            } catch (err) {
-                resultDiv.innerHTML = "Request failed: " + err;
-            }
-        }
-    </script>
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function typeInto(el, text, speed = 14) {
+    el.classList.add('show');
+    el.innerHTML = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'code-cursor';
+    for (let i = 0; i < text.length; i++) {
+      el.textContent = text.slice(0, i + 1);
+      el.appendChild(cursor);
+      await sleep(speed);
+    }
+  }
+
+  async function revealSteps(container, lines) {
+    container.innerHTML = '';
+    for (let i = 0; i < lines.length; i++) {
+      const div = document.createElement('div');
+      div.className = 'step';
+      div.textContent = lines[i];
+      container.appendChild(div);
+      await sleep(280);
+    }
+  }
+
+  async function askQuestion() {
+    const question = document.getElementById('question').value.trim();
+    if (!question) return;
+
+    const btn = document.getElementById('askBtn');
+    const consoleEl = document.getElementById('console');
+    const errorBox = document.getElementById('errorBox');
+    const phaseText = document.getElementById('phaseText');
+    const spinner = document.getElementById('spinner');
+    const planList = document.getElementById('planList');
+    const codeBlock = document.getElementById('codeBlock');
+    const answerBlock = document.getElementById('answerBlock');
+    const retryNote = document.getElementById('retryNote');
+    const attemptsBadge = document.getElementById('attemptsBadge');
+
+    btn.disabled = true;
+    errorBox.classList.remove('show');
+    answerBlock.classList.remove('show');
+    codeBlock.classList.remove('show');
+    retryNote.classList.remove('show');
+    attemptsBadge.classList.remove('show');
+    planList.innerHTML = '';
+    spinner.style.display = 'inline-block';
+    phaseText.textContent = 'sending question…';
+    consoleEl.classList.add('show');
+
+    try {
+      const fetchPromise = fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      });
+
+      await sleep(350);
+      phaseText.textContent = 'planning…';
+
+      const response = await fetchPromise;
+      const data = await response.json();
+
+      if (!response.ok) {
+        errorBox.textContent = 'Error: ' + JSON.stringify(data.detail);
+        errorBox.classList.add('show');
+        consoleEl.classList.remove('show');
+        return;
+      }
+
+      const planLines = data.plan.split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean);
+      await revealSteps(planList, planLines);
+
+      if (data.attempts > 1) {
+        phaseText.textContent = 'first attempt hit an error — rewriting…';
+        retryNote.textContent = `⚠ attempt 1 failed — agent read the error and corrected its own code`;
+        retryNote.classList.add('show');
+        await sleep(500);
+      }
+
+      phaseText.textContent = 'writing code…';
+      await sleep(200);
+      await typeInto(codeBlock, `result = ...  # generated & executed by the agent`, 10);
+
+      phaseText.textContent = 'done';
+      spinner.style.display = 'none';
+      answerBlock.classList.add('show');
+      document.getElementById('answerValue').textContent = data.answer;
+      attemptsBadge.textContent = `${data.attempts} attempt${data.attempts > 1 ? 's' : ''}`;
+      attemptsBadge.classList.add('show');
+
+    } catch (err) {
+      errorBox.textContent = 'Request failed: ' + err;
+      errorBox.classList.add('show');
+      consoleEl.classList.remove('show');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('question').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      askQuestion();
+    }
+  });
+</script>
 </body>
 </html>
